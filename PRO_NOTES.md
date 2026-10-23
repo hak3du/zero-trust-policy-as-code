@@ -5,7 +5,7 @@ This is the authoritative factual build log. Distinguish implemented, tested, ob
 ## Project control
 - Project: Terraform + OPA/Rego infrastructure guardrails
 - Repository: https://github.com/hak3du/zero-trust-policy-as-code
-- Status: Source files published to `main`; local validation completed with OPA 1.21.4 on Windows (4/4 unit tests passed; compliant fixture returned 0 denials; noncompliant fixture returned 4 denials). Hosted GitHub Actions is blocked before job start by an account billing lock.
+- Status: Source files published to `main`; local validation completed with OPA 1.21.4 on Windows (12/12 unit tests passed; compliant fixture returned 0 denials; noncompliant fixture returned 4 denials). The local `validate.ps1` script completed all three validation stages successfully. Hosted GitHub Actions is blocked before job start by an account billing lock.
 - No cloud infrastructure has been deployed or changed.
 - Do not claim passing tests, measured impact, NIST conformance, or production deployment without evidence.
 
@@ -59,23 +59,34 @@ Initial publication commits (one per file):
   4. `SSH (TCP/22) exposed to the public internet: aws_security_group.admin`
 - Interpretation: unit tests and both example-fixture checks passed locally. This is not proof of full Terraform-provider behavior, production readiness, complete control coverage, or NIST SP 800-207 conformance. No cloud infrastructure was deployed or changed.
 
+
+### 2026-10-23 — Step 6: Expanded policy tests and repeatable local validation
+- Added test coverage for public RDP over IPv4/IPv6, public SSH over IPv6, all four S3 public-access-block settings, and security-group ingress explicitly marked unknown in Terraform plan JSON.
+- Reproduced the unknown-ingress gap: the new test failed while the previous 11 tests passed. Added a Rego denial for non-delete security-group changes where `change.after_unknown.ingress == true` and `change.after` is an object.
+- Re-ran `opa test policy -v`: **PASS 12/12** on OPA 1.21.4, Windows/amd64.
+- Re-ran the compliant fixture evaluation: **0 denials**.
+- Re-ran the noncompliant fixture evaluation: **4 denials**. Observed messages identify unencrypted EBS, public RDP, disabled S3 `block_public_policy`, and public SSH.
+- Created and executed root-level `validate.ps1`. Observed all stages pass: 12/12 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
+- Scope limits: these are local fixture/test results only. Hosted Actions remains blocked before job startup by the reported account billing lock; no cloud resources were deployed or changed. The unknown-ingress guard currently targets the explicit case where the entire ingress attribute is marked unknown; nested/partial unknown values require further review.
+
 ## Next actions
 - [ ] Check the outcome of the retried GitHub Actions job and diagnose any runner/provisioning issue.
-- [ ] Run `opa version` and `opa test policy -v` in a working OPA 1.x environment.
-- [ ] Verify compliant fixture yields zero violations.
-- [ ] Verify noncompliant fixture yields expected violations and inspect emitted messages.
+- [x] Run `opa version` and `opa test policy -v` locally on OPA 1.21.4; 12/12 tests pass.
+- [x] Verify compliant fixture yields zero violations (observed 0).
+- [x] Verify noncompliant fixture yields four expected violations and inspect emitted messages.
 - [ ] Review unknown plan values, missing controls, replacement actions, and module resources.
-- [ ] Add tests for IPv6 ingress, RDP, all S3 public-access settings, and policy edge cases.
-- [ ] Capture sanitized output and update this log with observed results.
+- [x] Add tests for IPv6 ingress, RDP, all four S3 public-access settings, and explicit unknown ingress; 12/12 tests pass.
+- [x] Record sanitized local outputs and observed results in this log.
 
 ## Results ledger
 | Check | Expected | Observed |
 |---|---|---|
 | Fixture JSON parsing | Both valid | PASS — Python JSON parser |
-| OPA unit tests | Pass | PASS — 4/4 on OPA 1.21.4, Windows/amd64 |
+| OPA unit tests | Pass | PASS — 12/12 on OPA 1.21.4, Windows/amd64 |
 | Compliant fixture | 0 violations | PASS — observed `0` |
 | Noncompliant fixture | 1+ violations | PASS — observed `4`; SSH, RDP, EBS encryption, and S3 public-access protection violations displayed |
 | GitHub Actions | Green | BLOCKED — GitHub UI reports account locked due to a billing issue; workflow job did not start |
+| Local validation script | All checks pass | PASS — `validate.ps1`: 12/12 tests; compliant 0 denials; noncompliant 4 denials |
 | Cloud deployment | Not required | Not performed |
 
 ## Evidence entry template
