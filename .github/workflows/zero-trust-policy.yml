@@ -3,7 +3,15 @@ name: Zero Trust Policy Checks
 on:
   push:
     branches: [main]
+    paths:
+      - "policy/**"
+      - "examples/**"
+      - ".github/workflows/zero-trust-policy.yml"
   pull_request:
+    paths:
+      - "policy/**"
+      - "examples/**"
+      - ".github/workflows/zero-trust-policy.yml"
   workflow_dispatch:
 
 permissions:
