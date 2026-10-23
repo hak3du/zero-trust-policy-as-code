@@ -10,6 +10,12 @@ Standalone portfolio demonstrator: evaluate Terraform plan JSON with Open Policy
 - EBS volumes explicitly configured without encryption.
 - S3 public-access-block settings explicitly disabled.
 
+## Provider-plan validation notes
+
+The policy has also been evaluated against isolated Terraform-generated AWS provider plan JSON (AWS provider v6.70.0). In the observed local checks, public SSH (TCP/22) and public RDP (TCP/3389) produced denials, while a security group whose configuration omitted ingress returned no violations even though the provider marked planned ingress as unknown.
+
+These are plan-only checks using test configuration and dummy credentials. No cloud infrastructure was applied or changed. The unresolved-ingress mitigation is targeted: recursive child-module configuration and all nested/partial unknown-value cases still require validation. See [PRO_NOTES.md](./PRO_NOTES.md) for commands, observed outputs, the regression encountered, limitations, and the evidence ledger.
+
 ## Run
 Requires OPA CLI 1.x and Make (or Bash/WSL/Git Bash on Windows).
 
