@@ -96,3 +96,77 @@ Initial publication commits (one per file):
 - Sanitized output or URL
 - Commit SHA
 - Limitations and next action
+
+
+### 2026-10-23 — Step 7: Terraform AWS-provider plan integration and unknown-ingress regression
+
+#### Purpose
+Validate the policy against real Terraform-generated plan JSON, not only hand-authored fixtures. The specific issue was that AWS provider plan metadata can report `change.after_unknown.ingress == true` for a security group whose configuration omits ingress entirely. Treating every such plan as unresolved exposure produced a false positive for a no-ingress compliant configuration. Conversely, simply suppressing the rule whenever configuration metadata was present would weaken the intended fail-closed behavior for explicitly configured but unresolved ingress.
+
+#### Tooling and safety boundary
+- Terraform CLI observed in the local environment: **1.17.0**.
+- AWS provider used for isolated plan generation: **hashicorp/aws v6.70.0**.
+- OPA CLI: **1.21.4**, Rego v1, Windows/amd64.
+- Tests were run from the downloaded project folder at `C:\Users\Administrator\Downloads\zero-trust-policy-as-code-main (1)\zero-trust-policy-as-code-main`.
+- The isolated integration fixture directory was `aws-policy-test\`; it was not a deployment of the portfolio's infrastructure.
+- Dummy AWS credentials and a placeholder VPC ID were used to produce plans. Commands stopped at `terraform plan` / JSON inspection and OPA evaluation. **No `terraform apply` was run; no AWS infrastructure was deployed or modified.**
+- Generated plan JSON files included `aws-policy-test\tplan.json`, `aws-policy-test\tplan-rdp.json`, and `aws-policy-test\compliant-test\compliant.json`. These are local test artifacts and are not assumed to be committed to the repository.
+
+#### Reproduction and evidence
+1. **Public SSH case:** generated a Terraform plan containing a security group whose ingress exposes TCP/22 to `0.0.0.0/0`. Evaluating the JSON with OPA returned:
+   `SSH (TCP/22) exposed to the public internet: aws_security_group.public_ssh_test`
+2. **Public RDP case:** generated a plan containing a security group whose ingress exposes TCP/3389 to `0.0.0.0/0`. OPA returned:
+   `RDP (TCP/3389) exposed to the public internet: aws_security_group.public_rdp_test`
+3. **Compliant no-ingress case:** generated a plan for a security group with no ingress block. The plan JSON showed `input.configuration.root_module.resources[0].expressions` contained no `ingress` expression, although provider plan metadata marked `after_unknown.ingress` as true. The intended OPA result was `[]` (zero violations), and that was observed after the policy change.
+4. The tests were plan-only. These checks validate the named resource patterns and provider behavior in this isolated fixture; they do not prove all AWS provider versions or every possible Terraform module/resource shape.
+
+#### Policy adjustment
+The unresolved-ingress logic now distinguishes two cases:
+- If `after_unknown.ingress` is true and root-module configuration resource metadata is unavailable/not an array, deny rather than assume safety.
+- If configuration metadata is present, deny when the matching root-module resource has an explicit `expressions.ingress` entry, while allowing the tested case where the ingress expression is absent because ingress was omitted from configuration.
+
+The existing synthetic regression test has no `configuration` object, so it continues to exercise the fail-closed branch. The real-provider compliant plan exercises the provider-specific omitted-ingress case.
+
+**Known limitation requiring follow-up:** this implementation searches `configuration.root_module.resources` for a matching resource address. Terraform configurations with nested child modules may place resource expressions in nested module configuration, so recursive module traversal and partial/nested unknown values have not yet been demonstrated. Do not describe this as complete handling of all unknown Terraform plan values. The rule is a targeted mitigation for the observed provider behavior, with fail-closed handling when root configuration resource metadata is absent.
+
+#### Exact OPA evaluation commands used
+From the project root, the SSH plan was evaluated with:
+```powershell
+& "$HOME\Tools\OPA\opa.exe" eval --format pretty --data .\policy --input .\aws-policy-test\tplan.json 'data.terraform.guardrails.violations'
+```
+
+The RDP plan was evaluated with:
+```powershell
+& "$HOME\Tools\OPA\opa.exe" eval --format pretty --data .\policy --input .\aws-policy-test\tplan-rdp.json 'data.terraform.guardrails.violations'
+```
+
+The compliant plan was evaluated with:
+```powershell
+& "$HOME\Tools\OPA\opa.exe" eval --format pretty --data .\policy --input .\aws-policy-test\compliant-test\compliant.json 'data.terraform.guardrails.violations'
+```
+
+Observed outcomes:
+- Public SSH fixture: **one SSH exposure denial**.
+- Public RDP fixture: **one RDP exposure denial**.
+- Compliant security group with no ingress expression: **empty result `[]`**.
+
+#### Regression encountered and correction
+- First attempted implementation only considered configured ingress. It regressed the synthetic unknown-ingress test because that test intentionally omits Terraform configuration metadata. Result: **11/12 tests passed**.
+- Corrected the rule into separate fail-closed and configuration-aware branches. This restored the synthetic regression case while addressing the real AWS provider false positive.
+- Re-ran `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\validate.ps1"` from the project root. Observed:
+  - `[1/3] Running policy tests...`
+  - `PASS: 12/12`
+  - `[2/3] Checking compliant fixture...`
+  - `PASS: compliant fixture produced 0 denials.`
+  - `[3/3] Checking noncompliant fixture...`
+  - `PASS: noncompliant fixture produced 4 denials.`
+  - `ALL VALIDATION CHECKS PASSED.`
+
+#### Git and source-control handling
+The local working directory was a ZIP-extracted folder, not a Git working tree: `git status --short` returned `fatal: not a git repository`, and a parent-directory check found no `.git` or `.gitignore`. No `git init` was run. The source changes are being applied through the GitHub repository workflow on a dedicated branch so the ZIP folder is not mistaken for a clone and the default branch is not silently overwritten.
+
+#### Evidence classification
+- **Implemented in the branch:** targeted unresolved-ingress policy change.
+- **Locally tested:** 12/12 Rego tests; compliant example 0 denials; noncompliant example 4 denials; `validate.ps1` completed all stages.
+- **Observed against real Terraform-generated plans:** public SSH denied; public RDP denied; no-ingress compliant security group returned no violations.
+- **Not verified:** hosted Actions green status; full recursive module handling; every provider/version/resource schema; complete Zero Trust coverage; production deployment; complete NIST SP 800-207 conformance.
