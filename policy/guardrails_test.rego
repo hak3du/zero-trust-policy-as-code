@@ -134,3 +134,47 @@ test_unknown_security_group_ingress_is_not_assumed_safe if {
     }
 }
 
+test_unknown_ingress_with_omitted_configuration_is_allowed if {
+    count(deny) == 0 with input as {
+        "resource_changes": [{
+            "address": "aws_security_group.no_ingress",
+            "type": "aws_security_group",
+            "change": {
+                "actions": ["create"],
+                "after": {},
+                "after_unknown": {"ingress": true}
+            }
+        }],
+        "configuration": {
+            "root_module": {
+                "resources": [{
+                    "address": "aws_security_group.no_ingress",
+                    "expressions": {}
+                }]
+            }
+        }
+    }
+}
+
+test_unknown_ingress_with_explicit_configuration_is_denied if {
+    count(deny) >= 1 with input as {
+        "resource_changes": [{
+            "address": "aws_security_group.configured_ingress",
+            "type": "aws_security_group",
+            "change": {
+                "actions": ["create"],
+                "after": {},
+                "after_unknown": {"ingress": true}
+            }
+        }],
+        "configuration": {
+            "root_module": {
+                "resources": [{
+                    "address": "aws_security_group.configured_ingress",
+                    "expressions": {"ingress": {"constant_value": []}}
+                }]
+            }
+        }
+    }
+}
+
