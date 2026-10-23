@@ -63,10 +63,10 @@ Initial publication commits (one per file):
 ### 2026-10-23 — Step 6: Expanded policy tests and repeatable local validation
 - Added test coverage for public RDP over IPv4/IPv6, public SSH over IPv6, all four S3 public-access-block settings, and security-group ingress explicitly marked unknown in Terraform plan JSON.
 - Reproduced the unknown-ingress gap: the new test failed while the previous 11 tests passed. Added a Rego denial for non-delete security-group changes where `change.after_unknown.ingress == true` and `change.after` is an object.
-- Re-ran `opa test policy -v`: **PASS 14/14** on OPA 1.21.4, Windows/amd64.
+- Re-ran `opa test policy -v`: **PASS 12/12** on OPA 1.21.4, Windows/amd64 (at this historical Step 6 checkpoint).
 - Re-ran the compliant fixture evaluation: **0 denials**.
 - Re-ran the noncompliant fixture evaluation: **4 denials**. Observed messages identify unencrypted EBS, public RDP, disabled S3 `block_public_policy`, and public SSH.
-- Created and executed root-level `validate.ps1`. Observed all stages pass: 12/14 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
+- Created and executed root-level `validate.ps1`. Observed all stages pass: 12/12 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
 - Scope limits: these are local fixture/test results only. Hosted Actions remains blocked before job startup by the reported account billing lock; no cloud resources were deployed or changed. The unknown-ingress guard currently targets the explicit case where the entire ingress attribute is marked unknown; nested/partial unknown values require further review.
 
 ## Next actions
@@ -174,7 +174,7 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 ### 2026-10-23 — Step 8: Main-branch provider regression coverage
 - Applied the provider-aware unknown-ingress policy and the associated README scope note directly to `main`.
 - Added two Rego regression tests to `policy/guardrails_test.rego`: (1) provider marks ingress unknown while root configuration omits an ingress expression, which should remain allowed; (2) provider marks ingress unknown while the matching configuration explicitly contains an ingress expression, which should be denied.
-- These two new tests are committed to `main`, but **have not been executed in this GitHub-connected session**. The previously observed 12/12 local test result predates these two additions. Re-run `opa test policy -v` and `.\validate.ps1` from a real clone before treating the expanded 14-test suite as passing.
+- The two new regression tests are committed to `main`. A fresh clone was validated locally on 2026-10-23: `validate.ps1` reported **14/14 tests passing**, compliant fixture 0 denials, noncompliant fixture 4 denials, and `ALL VALIDATION CHECKS PASSED.`
 - The prior Terraform AWS provider plan observations remain limited to the isolated local test fixtures documented in Step 7. No cloud apply or deployment was performed.
 
 
