@@ -69,12 +69,16 @@ deny contains msg if {
 
 violations := sort([msg | some msg in deny])
 
+# Fail closed when Terraform plan JSON does not include configuration metadata.
+# Without configuration.resources, we cannot determine whether ingress was
+# explicitly omitted or configured but unresolved.
 deny contains msg if {
     some rc in input.resource_changes
     rc.type == "aws_security_group"
     rc.change.actions[_] != "delete"
     is_object(rc.change.after)
     object.get(object.get(rc.change, "after_unknown", {}), "ingress", false) == true
+    not is_array(object.get(object.get(object.get(input, "configuration", {}), "root_module", {}), "resources", null))
 
     msg := sprintf(
         "Security group ingress is unresolved in the Terraform plan; cannot verify exposure: %s",
@@ -82,3 +86,28 @@ deny contains msg if {
     )
 }
 
+# If configuration metadata exists, only flag unresolved ingress when the
+# corresponding root-module resource explicitly contains an ingress expression.
+# The AWS provider may mark an omitted ingress attribute as unknown in planned
+# state even when the user did not configure any ingress block.
+deny contains msg if {
+    some rc in input.resource_changes
+    rc.type == "aws_security_group"
+    rc.change.actions[_] != "delete"
+    is_object(rc.change.after)
+    object.get(object.get(rc.change, "after_unknown", {}), "ingress", false) == true
+
+    configured_resources := object.get(
+        object.get(object.get(input, "configuration", {}), "root_module", {}),
+        "resources",
+        [],
+    )
+    some r in configured_resources
+    r.address == rc.address
+    object.get(r.expressions, "ingress", null) != null
+
+    msg := sprintf(
+        "Security group ingress is unresolved in the Terraform plan; cannot verify exposure: %s",
+        [rc.address],
+    )
+}
