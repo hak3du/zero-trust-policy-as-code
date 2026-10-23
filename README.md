@@ -13,34 +13,35 @@ Standalone portfolio demonstrator: evaluate Terraform plan JSON with Open Policy
 
 ## Validation
 
-The local validation script runs the Rego tests and evaluates the compliant and noncompliant JSON fixtures:
+Run the local policy regression suite and fixture checks from the repository root:
 
 ```powershell
 .\validate.ps1
 ```
 
-Or use OPA directly:
+The reproducible Terraform AWS-provider integration suite is documented in [terraform-integration/README.md](./terraform-integration/README.md).
 
-```bash
-opa test policy -v
-bash scripts/check.sh
-```
-
-### Terraform AWS provider integration suite
-
-A reproducible, isolated integration suite is available under [terraform-integration](./terraform-integration/README.md). It pins hashicorp/aws v6.70.0 and generates fresh Terraform plans for public SSH, public RDP, and a security group with no ingress block. OPA evaluates the JSON produced by `terraform show -json`.
-
-Run on Windows PowerShell from the repository root:
+Run on Windows PowerShell:
 
 ```powershell
 .\scripts\test-terraform-aws.ps1 -TerraformPath "$HOME\Tools\Terraform\terraform.exe" -OpaPath "$HOME\Tools\OPA\opa.exe"
 ```
 
-The runner is designed to use dummy credentials and a placeholder VPC ID. It executes init, plan, show, and OPA evaluation only—never `terraform apply`. It writes local plan and JSON artifacts to `artifacts/terraform-aws/`. Those generated JSON files are not considered verified repository artifacts until the suite has actually been run and the outputs reviewed.
+### Observed integration results
 
-Previously observed local integration results against Terraform-generated plans from AWS provider v6.70.0 were: public SSH = 1 denial, public RDP = 1 denial, compliant no-ingress = 0 denials. The reproducible runner itself still needs to be executed in a fresh clone before claiming its end-to-end run passed.
+The fresh-plan runner was executed locally on 2026-10-23 using Terraform 1.17.0, AWS provider 6.70.0, and OPA 1.21.4 on Windows. The runner reported **ALL TERRAFORM/AWS INTEGRATION CHECKS PASSED**:
 
-**Scope limitation:** recursive child-module configuration and all nested/partial unknown-value cases still require validation. This is not a production deployment or proof of complete NIST SP 800-207 conformance. No cloud infrastructure has been applied or changed.
+| Scenario | Expected denials | Actual denials | Result |
+|---|---:|---:|---|
+| Public SSH (TCP/22 to 0.0.0.0/0) | 1 | 1 | PASS |
+| Public RDP (TCP/3389 to 0.0.0.0/0) | 1 | 1 | PASS |
+| Security group with no ingress block | 0 | 0 | PASS |
+
+These are local, plan-only integration tests. The fixtures use a placeholder VPC ID and dummy credentials. The runner calls Terraform init, plan, and show, then evaluates the generated JSON with OPA; it never invokes `terraform apply`. No AWS infrastructure was deployed or changed.
+
+The generated `.tfplan` and JSON files remain local under `artifacts/terraform-aws/` and are intentionally not committed by default. Terraform plan artifacts can expose infrastructure details or sensitive values in other configurations; review and sanitize before sharing.
+
+**Scope limitation:** these three cases validate only the tested SSH, RDP, and no-ingress scenarios. Recursive child-module configuration and all nested/partial unknown-value cases still require validation. This is not a production deployment or proof of complete NIST SP 800-207 conformance.
 
 ## Tooling and CI
 
@@ -48,6 +49,6 @@ The local baseline used Terraform 1.17.0 and OPA 1.21.4 on Windows/amd64. Hosted
 
 ## Accurate resume wording
 
-> Built a Terraform plan policy gate with OPA/Rego to detect selected cloud misconfigurations before deployment, supported by policy tests, JSON fixtures, and a Terraform AWS-provider integration suite.
+> Built and locally validated a Terraform plan policy gate with OPA/Rego, including automated AWS-provider integration tests that detected tested public SSH/RDP exposures and accepted a no-ingress scenario.
 
-Only claim measured impact or end-to-end test success after collecting evidence. See [PRO_NOTES.md](./PRO_NOTES.md).
+Do not claim measured impact, production deployment, comprehensive security coverage, or complete NIST SP 800-207 conformance without additional evidence. See `PRO_NOTES.md`.
