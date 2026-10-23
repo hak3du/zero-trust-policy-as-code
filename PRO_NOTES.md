@@ -5,7 +5,7 @@ This is the authoritative factual build log. Distinguish implemented, tested, ob
 ## Project control
 - Project: Terraform + OPA/Rego infrastructure guardrails
 - Repository: https://github.com/hak3du/zero-trust-policy-as-code
-- Status: Source files published to `main`; runtime policy tests are unverified; GitHub Actions has failed before exposing job steps.
+- Status: Source files published to `main`; local validation completed with OPA 1.21.4 on Windows (4/4 unit tests passed; compliant fixture returned 0 denials; noncompliant fixture returned 4 denials). Hosted GitHub Actions is blocked before job start by an account billing lock.
 - No cloud infrastructure has been deployed or changed.
 - Do not claim passing tests, measured impact, NIST conformance, or production deployment without evidence.
 
@@ -42,15 +42,22 @@ Initial publication commits (one per file):
 
 ### 2026-10-23 — Step 4: Initial validation observations
 - Parsed both example plan fixtures with Python's JSON parser: **PASS**.
-- The local runtime does not have the `opa` executable installed. No local OPA test or policy evaluation has been performed.
-- GitHub Actions run 1: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964973624 — reported `failure`, completed about two seconds after start, with no job steps exposed.
-- GitHub Actions run 2: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964974324 — reported `failure`, completed about two seconds after start, with no job steps exposed.
-- GitHub Actions run 3: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39965095970 — reported `failure`, completed about two seconds after start, with no job steps exposed.
-- Log retrieval returned GitHub `404 BlobNotFound`; job-step retrieval returned an empty step list. Root cause is **undetermined**; do not attribute failure to policy syntax without evidence.
-- Checked the official Open Policy Agent setup action documentation. The workflow's `open-policy-agent/setup-opa@v2` reference and `version: latest` input match the documented usage: https://github.com/open-policy-agent/setup-opa#readme . This does not explain the zero-step failure.
-- Retried the failed GitHub Actions job once through GitHub's rerun-job operation. The retry also failed. The new job ID was `120453705402`; step retrieval returned an empty list and log retrieval returned `404 BlobNotFound`. This reinforces that no runner steps/logs were exposed; the underlying cause remains unknown.
-- Adjusted workflow triggers to run only when policy, fixture, or workflow files change, avoiding unnecessary runs for notes-only commits. Workflow change commit: `ca8b69b98bc0cafef41b4ba9cfcf5415218f352c`.
-- CI is not green; policy behavior remains unverified.
+- Initial GitHub Actions runs failed before exposing steps. The latest run's UI later showed the explicit message: `The job was not started because your account is locked due to a billing issue.` This is an account-level runner/billing block, not evidence of a Rego test failure. The Ubuntu 26 migration notice is informational.
+- Workflow triggers were narrowed to policy, fixture, and workflow changes so notes-only commits do not trigger CI. Workflow change commit: `ca8b69b98bc0cafef41b4ba9cfcf5415218f352c`.
+- Hosted GitHub Actions remains blocked by the billing lock. Local validation was therefore performed manually on Windows, using the downloaded OPA executable.
+
+### 2026-10-23 — Step 5: Manual OPA validation on Windows
+- OPA version command: `& "$HOME\Tools\OPA\opa.exe" version`.
+- Observed version: **OPA 1.21.4**, Rego v1, Windows/amd64; build timestamp reported by the executable: `2026-10-23T13:00:56Z`.
+- Command: `opa test policy -v` (invoked through `$HOME\Tools\OPA\opa.exe`). Result: **PASS 4/4**. Passing tests: public SSH denied; unencrypted EBS denied; private SSH allowed; destroy-only change ignored.
+- Command: `opa eval --format raw --data policy --input examples/compliant-plan.json "count(data.terraform.guardrails.deny)"`. Observed output: `0` — **PASS**, compliant fixture produced no denials.
+- Command: `opa eval --format raw --data policy --input examples/noncompliant-plan.json "count(data.terraform.guardrails.deny)"`. Observed output: `4` — **PASS**, noncompliant fixture produced four denials.
+- Command: `opa eval --format pretty --data policy --input examples/noncompliant-plan.json "data.terraform.guardrails.violations"`. Observed four violations:
+  1. `EBS volume encryption explicitly disabled: aws_ebs_volume.data`
+  2. `RDP (TCP/3389) exposed to the public internet: aws_security_group.rdp`
+  3. `S3 public-access protection 'block_public_policy' disabled: aws_s3_bucket_public_access_block.data`
+  4. `SSH (TCP/22) exposed to the public internet: aws_security_group.admin`
+- Interpretation: unit tests and both example-fixture checks passed locally. This is not proof of full Terraform-provider behavior, production readiness, complete control coverage, or NIST SP 800-207 conformance. No cloud infrastructure was deployed or changed.
 
 ## Next actions
 - [ ] Check the outcome of the retried GitHub Actions job and diagnose any runner/provisioning issue.
@@ -65,10 +72,10 @@ Initial publication commits (one per file):
 | Check | Expected | Observed |
 |---|---|---|
 | Fixture JSON parsing | Both valid | PASS — Python JSON parser |
-| OPA unit tests | Pass | NOT RUN — OPA unavailable locally |
-| Compliant fixture | 0 violations | Pending |
-| Noncompliant fixture | 1+ violations | Pending |
-| GitHub Actions | Green | FAIL — three original runs plus one retry; all observed job attempts expose no steps/logs; root cause unknown |
+| OPA unit tests | Pass | PASS — 4/4 on OPA 1.21.4, Windows/amd64 |
+| Compliant fixture | 0 violations | PASS — observed `0` |
+| Noncompliant fixture | 1+ violations | PASS — observed `4`; SSH, RDP, EBS encryption, and S3 public-access protection violations displayed |
+| GitHub Actions | Green | BLOCKED — GitHub UI reports account locked due to a billing issue; workflow job did not start |
 | Cloud deployment | Not required | Not performed |
 
 ## Evidence entry template
