@@ -244,3 +244,11 @@ Once topics and branch protection are configured and the demo is published, appe
 - Repository topics and branch protection have not been changed by this step. The connected GitHub actions available in this workflow support repository/file reads and content commits but do not expose a write action for repository topics or branch-protection settings. Those two settings must be saved through GitHub's repository UI and then verified.
 - Next: configure topics at https://github.com/hak3du/zero-trust-policy-as-code/settings and protect `main` at https://github.com/hak3du/zero-trust-policy-as-code/settings/branches; then record the verified settings. After that, capture and publish the real demo and replace the README's script-only reference with the verified video link.
 - This step creates a ready-to-record demonstration path; it does not claim that repository settings or video publication are complete.
+
+
+### 2026-10-23 — Step 13: GitHub code-upload/write-path smoke test
+
+- Purpose: verify whether the connected GitHub workflow can still publish a source-controlled change.
+- Action: appended this dated entry to `PRO_NOTES.md` on `feat/reproducible-terraform-aws-integration` using GitHub's file-contents write path. Existing notes were preserved; no prior content was deleted.
+- Result: pending confirmation from the write response and a follow-up read of the committed file.
+- Scope: this smoke test checks a text-file commit to the feature branch. It does not test branch protection, hosted Actions, deployment, or writes to `main`.
