@@ -29,7 +29,7 @@ Prepared policy, unit tests, two plan fixtures, local test script, Makefile, REA
 ### 2026-10-23 — Step 3: Repository created and files published
 Confirmed `hak3du/zero-trust-policy-as-code` exists, is public, and uses `main` as its default branch. Connected GitHub permissions report push access. Published the README, Rego policy and tests, two fixtures, local check script, Makefile, workflow, and this notes file.
 
-Publication commits (one per file):
+Initial publication commits (one per file):
 - README.md — `b1632c9f492d5956f3c3c49298cb8a4dfe203b57`
 - policy/guardrails.rego — `53aa28860e69c291bcd7854668c2c3279f707baf`
 - policy/guardrails_test.rego — `cfcab1a4abfa0ec3ada1537a768ceafccfed3e10`
@@ -37,15 +37,17 @@ Publication commits (one per file):
 - examples/noncompliant-plan.json — `68674d854ceb2f7ebd31bc08e327694abd64fef7`
 - scripts/check.sh — `1c0ba1907d7fc33c913e9ff3c6ac33b2baeca1c8`
 - Makefile — `6ef2b927efd5c4b07a6b3f9fd0268cbcef33af95`
-- .github/workflows/zero-trust-policy.yml — `a6466f4bd03f51c441bf39d54eec12aaa3f97e76`
-- PRO_NOTES.md initial version — `b7fc010365b132e8e7e87a5144ef0d48795a250e`
+- Initial workflow — `a6466f4bd03f51c441bf39d54eec12aaa3f97e76`
+- Initial PRO_NOTES.md — `b7fc010365b132e8e7e87a5144ef0d48795a250e`
 
 ### 2026-10-23 — Step 4: Initial validation observations
 - Parsed both example plan fixtures with Python's JSON parser: **PASS**.
 - The local runtime does not have the `opa` executable installed. No local OPA test or policy evaluation has been performed.
 - GitHub Actions run 1: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964973624 — reported `failure`, completed about two seconds after start, with no job steps exposed.
-- GitHub Actions run 2: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964974324 — reported `failure`, also completed about two seconds after start, with no job steps exposed.
+- GitHub Actions run 2: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964974324 — reported `failure`, completed about two seconds after start, with no job steps exposed.
+- GitHub Actions run 3: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39965095970 — reported `failure`, completed about two seconds after start, with no job steps exposed.
 - Log retrieval for run 2 returned GitHub `404 BlobNotFound`. Root cause is **undetermined**; do not attribute failure to policy syntax without evidence.
+- Adjusted workflow triggers to run only when policy, fixture, or workflow files change, avoiding unnecessary runs for notes-only commits. Workflow change commit: `ca8b69b98bc0cafef41b4ba9cfcf5415218f352c`.
 - CI is not green; policy behavior remains unverified.
 
 ## Next actions
@@ -64,7 +66,7 @@ Publication commits (one per file):
 | OPA unit tests | Pass | NOT RUN — OPA unavailable locally |
 | Compliant fixture | 0 violations | Pending |
 | Noncompliant fixture | 1+ violations | Pending |
-| GitHub Actions | Green | FAIL — two runs, no steps/logs exposed; root cause unknown |
+| GitHub Actions | Green | FAIL — three runs, no steps/logs exposed; root cause unknown |
 | Cloud deployment | Not required | Not performed |
 
 ## Evidence entry template
