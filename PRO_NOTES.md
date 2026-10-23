@@ -170,3 +170,10 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 - **Locally tested:** 12/12 Rego tests; compliant example 0 denials; noncompliant example 4 denials; `validate.ps1` completed all stages.
 - **Observed against real Terraform-generated plans:** public SSH denied; public RDP denied; no-ingress compliant security group returned no violations.
 - **Not verified:** hosted Actions green status; full recursive module handling; every provider/version/resource schema; complete Zero Trust coverage; production deployment; complete NIST SP 800-207 conformance.
+
+### 2026-10-23 — Step 8: Main-branch provider regression coverage
+- Applied the provider-aware unknown-ingress policy and the associated README scope note directly to `main`.
+- Added two Rego regression tests to `policy/guardrails_test.rego`: (1) provider marks ingress unknown while root configuration omits an ingress expression, which should remain allowed; (2) provider marks ingress unknown while the matching configuration explicitly contains an ingress expression, which should be denied.
+- These two new tests are committed to `main`, but **have not been executed in this GitHub-connected session**. The previously observed 12/12 local test result predates these two additions. Re-run `opa test policy -v` and `.\validate.ps1` from a real clone before treating the expanded 14-test suite as passing.
+- The prior Terraform AWS provider plan observations remain limited to the isolated local test fixtures documented in Step 7. No cloud apply or deployment was performed.
+
