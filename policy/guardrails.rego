@@ -68,3 +68,17 @@ deny contains msg if {
 }
 
 violations := sort([msg | some msg in deny])
+
+deny contains msg if {
+    some rc in input.resource_changes
+    rc.type == "aws_security_group"
+    rc.change.actions[_] != "delete"
+    is_object(rc.change.after)
+    object.get(object.get(rc.change, "after_unknown", {}), "ingress", false) == true
+
+    msg := sprintf(
+        "Security group ingress is unresolved in the Terraform plan; cannot verify exposure: %s",
+        [rc.address],
+    )
+}
+
