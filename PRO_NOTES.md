@@ -46,12 +46,14 @@ Initial publication commits (one per file):
 - GitHub Actions run 1: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964973624 — reported `failure`, completed about two seconds after start, with no job steps exposed.
 - GitHub Actions run 2: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39964974324 — reported `failure`, completed about two seconds after start, with no job steps exposed.
 - GitHub Actions run 3: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39965095970 — reported `failure`, completed about two seconds after start, with no job steps exposed.
-- Log retrieval for run 2 returned GitHub `404 BlobNotFound`. Root cause is **undetermined**; do not attribute failure to policy syntax without evidence.
+- Log retrieval returned GitHub `404 BlobNotFound`; job-step retrieval returned an empty step list. Root cause is **undetermined**; do not attribute failure to policy syntax without evidence.
+- Checked the official Open Policy Agent setup action documentation. The workflow's `open-policy-agent/setup-opa@v2` reference and `version: latest` input match the documented usage: https://github.com/open-policy-agent/setup-opa#readme . This does not explain the zero-step failure.
+- Retried the failed GitHub Actions job once through GitHub's rerun-job operation. Retry was accepted; its outcome has not yet been verified.
 - Adjusted workflow triggers to run only when policy, fixture, or workflow files change, avoiding unnecessary runs for notes-only commits. Workflow change commit: `ca8b69b98bc0cafef41b4ba9cfcf5415218f352c`.
 - CI is not green; policy behavior remains unverified.
 
 ## Next actions
-- [ ] Diagnose why GitHub Actions jobs terminate before exposing steps; rerun once actionable logs or a fix are available.
+- [ ] Check the outcome of the retried GitHub Actions job and diagnose any runner/provisioning issue.
 - [ ] Run `opa version` and `opa test policy -v` in a working OPA 1.x environment.
 - [ ] Verify compliant fixture yields zero violations.
 - [ ] Verify noncompliant fixture yields expected violations and inspect emitted messages.
@@ -66,7 +68,7 @@ Initial publication commits (one per file):
 | OPA unit tests | Pass | NOT RUN — OPA unavailable locally |
 | Compliant fixture | 0 violations | Pending |
 | Noncompliant fixture | 1+ violations | Pending |
-| GitHub Actions | Green | FAIL — three runs, no steps/logs exposed; root cause unknown |
+| GitHub Actions | Green | FAIL — three runs, no steps/logs exposed; retry accepted, result pending |
 | Cloud deployment | Not required | Not performed |
 
 ## Evidence entry template
