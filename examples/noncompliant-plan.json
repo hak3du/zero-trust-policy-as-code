@@ -1,0 +1,10 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.0",
+  "resource_changes": [
+    {"address":"aws_security_group.admin","mode":"managed","type":"aws_security_group","name":"admin","change":{"actions":["create"],"before":null,"after":{"ingress":[{"from_port":22,"to_port":22,"protocol":"tcp","cidr_blocks":["0.0.0.0/0"],"ipv6_cidr_blocks":[]}]}}},
+    {"address":"aws_security_group.rdp","mode":"managed","type":"aws_security_group","name":"rdp","change":{"actions":["create"],"before":null,"after":{"ingress":[{"from_port":3389,"to_port":3389,"protocol":"tcp","cidr_blocks":["0.0.0.0/0"],"ipv6_cidr_blocks":[]}]}}},
+    {"address":"aws_ebs_volume.data","mode":"managed","type":"aws_ebs_volume","name":"data","change":{"actions":["create"],"before":null,"after":{"encrypted":false}}},
+    {"address":"aws_s3_bucket_public_access_block.data","mode":"managed","type":"aws_s3_bucket_public_access_block","name":"data","change":{"actions":["create"],"before":null,"after":{"block_public_acls":true,"ignore_public_acls":true,"block_public_policy":false,"restrict_public_buckets":true}}}
+  ]
+}
