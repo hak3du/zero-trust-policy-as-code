@@ -24,7 +24,7 @@ The compliant fixture should yield zero violations; the noncompliant fixture sho
 On Windows PowerShell, after installing OPA 1.x, run the repository's local validation script:
 
 ```powershell
-.\\validate.ps1
+.\validate.ps1
 ```
 
 The script runs the Rego tests and verifies both example fixtures. Hosted GitHub Actions may still be unavailable if the account's billing lock prevents runner startup.
