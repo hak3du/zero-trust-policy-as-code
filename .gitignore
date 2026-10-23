@@ -1,0 +1,10 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Generated plan JSON can expose infrastructure details; keep outputs local.
+artifacts/terraform-aws/*
+!artifacts/terraform-aws/.gitkeep
