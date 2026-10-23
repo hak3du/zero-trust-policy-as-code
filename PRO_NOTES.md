@@ -233,3 +233,14 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 
 #### Next evidence checkpoint
 Once topics and branch protection are configured and the demo is published, append the verified setting state, date, relevant URLs, and commit references here. Keep this log append-only: add dated entries for new evidence and corrections; do not delete prior historical entries.
+
+
+### 2026-10-23 — Step 12: Recruiter demo path prepared
+
+- Added `docs/DEMO_SCRIPT.md` with a concise 60-second screen-recording plan, narration, exact PowerShell commands, safety checklist, and publication checklist. Commit: `7b6fe50dd61a8b9649e61b23933e3789bc9ef710`.
+- Updated the feature-branch README to link the demo script and clearly label it as a recording script, not an already-published video. Commit: `1dd57d56ea1507a48e85e602471aeb8db8a23612`.
+- The demo sequence highlights the documented local policy-validation baseline and the three previously observed Terraform/AWS integration outcomes. During recording, show the actual current terminal output; do not reuse historical output as if it were a new run.
+- Recording and publishing the video remain pending because the actual terminal capture must be made from the user's local environment. No video URL is claimed.
+- Repository topics and branch protection have not been changed by this step. The connected GitHub actions available in this workflow support repository/file reads and content commits but do not expose a write action for repository topics or branch-protection settings. Those two settings must be saved through GitHub's repository UI and then verified.
+- Next: configure topics at https://github.com/hak3du/zero-trust-policy-as-code/settings and protect `main` at https://github.com/hak3du/zero-trust-policy-as-code/settings/branches; then record the verified settings. After that, capture and publish the real demo and replace the README's script-only reference with the verified video link.
+- This step creates a ready-to-record demonstration path; it does not claim that repository settings or video publication are complete.
