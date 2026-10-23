@@ -1,0 +1,2 @@
+Generated Terraform plans and JSON output are created here by scripts/test-terraform-aws.ps1.
+Review generated files before committing; real plans can contain sensitive data.
