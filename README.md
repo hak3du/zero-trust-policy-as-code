@@ -27,6 +27,8 @@ Run on Windows PowerShell:
 .\scripts\test-terraform-aws.ps1 -TerraformPath "$HOME\Tools\Terraform\terraform.exe" -OpaPath "$HOME\Tools\OPA\opa.exe"
 ```
 
+For a focused recruiter-facing walkthrough, see the [60-second demo recording script](./docs/DEMO_SCRIPT.md). This is a script for recording a real terminal run, not a claim that a video has already been published.
+
 ### Observed integration results
 
 The fresh-plan runner was executed locally on 2026-10-23 using Terraform 1.17.0, AWS provider 6.70.0, and OPA 1.21.4 on Windows. The runner reported **ALL TERRAFORM/AWS INTEGRATION CHECKS PASSED**:
