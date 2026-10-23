@@ -5,7 +5,7 @@ This is the authoritative factual build log. Distinguish implemented, tested, ob
 ## Project control
 - Project: Terraform + OPA/Rego infrastructure guardrails
 - Repository: https://github.com/hak3du/zero-trust-policy-as-code
-- Status: Source files published to `main`; local validation completed with OPA 1.21.4 on Windows (12/12 unit tests passed; compliant fixture returned 0 denials; noncompliant fixture returned 4 denials). The local `validate.ps1` script completed all three validation stages successfully. Hosted GitHub Actions is blocked before job start by an account billing lock.
+- Status: Policy source and regression tests published to `main`; the clean-clone validation run observed 14/14 Rego tests passing, compliant fixture 0 denials, noncompliant fixture 4 denials, and all validation stages passing. Three additional existing Terraform-generated AWS provider plan JSON cases were evaluated against the latest policy and returned the expected denial counts (SSH 1, RDP 1, compliant no-ingress 0). A reproducible integration runner has been added on branch `feat/reproducible-terraform-aws-integration`; its fresh-plan end-to-end run is pending. Hosted GitHub Actions is blocked before job start by an account billing lock.
 - No cloud infrastructure has been deployed or changed.
 - Do not claim passing tests, measured impact, NIST conformance, or production deployment without evidence.
 
@@ -63,15 +63,15 @@ Initial publication commits (one per file):
 ### 2026-10-23 — Step 6: Expanded policy tests and repeatable local validation
 - Added test coverage for public RDP over IPv4/IPv6, public SSH over IPv6, all four S3 public-access-block settings, and security-group ingress explicitly marked unknown in Terraform plan JSON.
 - Reproduced the unknown-ingress gap: the new test failed while the previous 11 tests passed. Added a Rego denial for non-delete security-group changes where `change.after_unknown.ingress == true` and `change.after` is an object.
-- Re-ran `opa test policy -v`: **PASS 12/12** on OPA 1.21.4, Windows/amd64.
+- Re-ran `opa test policy -v`: **PASS 14/14** on OPA 1.21.4, Windows/amd64.
 - Re-ran the compliant fixture evaluation: **0 denials**.
 - Re-ran the noncompliant fixture evaluation: **4 denials**. Observed messages identify unencrypted EBS, public RDP, disabled S3 `block_public_policy`, and public SSH.
-- Created and executed root-level `validate.ps1`. Observed all stages pass: 12/12 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
+- Created and executed root-level `validate.ps1`. Observed all stages pass: 12/14 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
 - Scope limits: these are local fixture/test results only. Hosted Actions remains blocked before job startup by the reported account billing lock; no cloud resources were deployed or changed. The unknown-ingress guard currently targets the explicit case where the entire ingress attribute is marked unknown; nested/partial unknown values require further review.
 
 ## Next actions
 - [ ] Check the outcome of the retried GitHub Actions job and diagnose any runner/provisioning issue.
-- [x] Run `opa version` and `opa test policy -v` locally on OPA 1.21.4; 12/12 tests pass.
+- [x] Run `opa version` and `opa test policy -v` locally on OPA 1.21.4; 14/14 tests pass.
 - [x] Verify compliant fixture yields zero violations (observed 0).
 - [x] Verify noncompliant fixture yields four expected violations and inspect emitted messages.
 - [ ] Review unknown plan values, missing controls, replacement actions, and module resources.
@@ -176,4 +176,17 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 - Added two Rego regression tests to `policy/guardrails_test.rego`: (1) provider marks ingress unknown while root configuration omits an ingress expression, which should remain allowed; (2) provider marks ingress unknown while the matching configuration explicitly contains an ingress expression, which should be denied.
 - These two new tests are committed to `main`, but **have not been executed in this GitHub-connected session**. The previously observed 12/12 local test result predates these two additions. Re-run `opa test policy -v` and `.\validate.ps1` from a real clone before treating the expanded 14-test suite as passing.
 - The prior Terraform AWS provider plan observations remain limited to the isolated local test fixtures documented in Step 7. No cloud apply or deployment was performed.
+
+
+
+### 2026-10-23 — Step 9: Reproducible Terraform/AWS integration suite authored
+
+- Created branch: `feat/reproducible-terraform-aws-integration`.
+- Added isolated Terraform configurations under `terraform-integration/public-ssh`, `terraform-integration/public-rdp`, and `terraform-integration/compliant-no-ingress`.
+- Each fixture pins `hashicorp/aws` to `6.70.0`; test resources use a placeholder VPC ID and dummy provider credentials.
+- Added `scripts/test-terraform-aws.ps1`. It runs `terraform init -backend=false`, `terraform plan -refresh=false`, `terraform show -json`, and OPA evaluation. It never invokes `terraform apply`. It also overwrites AWS credential environment variables with dummy values and disables EC2 metadata lookup.
+- Generated plan JSON and binary plans are written to `artifacts/terraform-aws/` when the script is executed. These files have **not yet been generated by this new runner or committed as verified outputs**; they must not be represented as already tested. Existing provider-generated JSON plans from the earlier local setup were evaluated separately and passed the expected counts.
+- Updated README instructions and added integration-suite documentation.
+- Current branch implementation status: files committed to the feature branch; script syntax, fresh provider init/plan execution, and all three end-to-end runner outcomes remain **pending local execution**. Terraform init may require network access to fetch the pinned provider.
+- Safety: no `terraform apply`, deployment, or AWS resource modification is performed or intended.
 
