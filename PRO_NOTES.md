@@ -59,7 +59,6 @@ Initial publication commits (one per file):
   4. `SSH (TCP/22) exposed to the public internet: aws_security_group.admin`
 - Interpretation: unit tests and both example-fixture checks passed locally. This is not proof of full Terraform-provider behavior, production readiness, complete control coverage, or NIST SP 800-207 conformance. No cloud infrastructure was deployed or changed.
 
-
 ### 2026-10-23 — Step 6: Expanded policy tests and repeatable local validation
 - Added test coverage for public RDP over IPv4/IPv6, public SSH over IPv6, all four S3 public-access-block settings, and security-group ingress explicitly marked unknown in Terraform plan JSON.
 - Reproduced the unknown-ingress gap: the new test failed while the previous 11 tests passed. Added a Rego denial for non-delete security-group changes where `change.after_unknown.ingress == true` and `change.after` is an object.
@@ -178,7 +177,6 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 - The prior Terraform AWS provider plan observations remain limited to the isolated local test fixtures documented in Step 7. No cloud apply or deployment was performed.
 
 
-
 ### 2026-10-23 — Step 9: Reproducible Terraform/AWS integration suite authored
 
 - Created branch: `feat/reproducible-terraform-aws-integration`.
@@ -189,7 +187,6 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 - Updated README instructions and added integration-suite documentation.
 - Validation status at the time of this Step 9 entry was pending; see Step 10 below for the completed fresh-plan execution and observed results.
 - Safety: no `terraform apply`, deployment, or AWS resource modification is performed or intended.
-
 
 
 ### 2026-10-23 — Step 10: Fresh-plan Terraform/AWS integration run passed
@@ -204,3 +201,35 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 - Generated plan and JSON paths were under local `artifacts/terraform-aws/`. The outputs have not been committed; binary plans and potentially sensitive plan JSON are intentionally excluded from the public repository by default.
 - This validates these three fixtures against the current policy and pinned provider only. It does not establish production deployment, comprehensive cloud security coverage, recursive child-module coverage, or complete NIST SP 800-207 conformance.
 - The runner was executed from a ZIP-extracted folder, not a Git working tree. The source files and documentation are committed on the feature branch via the GitHub repository workflow; generated local outputs are not automatically uploaded.
+
+
+### 2026-10-23 — Step 11: Repository hardening and discoverability — next execution phase
+
+**Objective:** make the project easier for reviewers to discover, inspect, and trust, while building on the already demonstrated local validation.
+
+#### Completed evidence carried forward
+- Published implementation of Terraform plan evaluation with OPA/Rego guardrails.
+- Expanded local policy suite: 14/14 Rego tests passed on OPA 1.21.4 in the documented clean-clone validation.
+- Fresh Terraform/AWS provider integration run passed **3/3 scenarios** with Terraform 1.17.0, AWS provider v6.70.0, and OPA 1.21.4:
+  - Public SSH: 1 expected denial, 1 observed.
+  - Public RDP: 1 expected denial, 1 observed.
+  - Compliant no-ingress: 0 expected denials, 0 observed.
+- The runner uses plan generation and OPA evaluation only; it does not run `terraform apply`.
+- These are concrete portfolio engineering signals: repeatable validation, a regression-tested policy edge case, and a reproducible provider-backed plan workflow.
+
+#### Immediate repository actions
+1. **Add GitHub repository topics** to improve relevant technical discovery: `terraform`, `opa`, `rego`, `zero-trust`, `policy-as-code`, `devsecops`, `infrastructure-as-code`, `cloud-security`, `nist-sp-800-207`, `aws`.
+2. **Configure branch protection for `main`** using the repository's available GitHub settings. Recommended controls: require pull requests where appropriate, prevent force-pushes and branch deletion, and require relevant status checks after a reliable hosted CI workflow is available.
+3. **Record a short demonstration** showing the actual local `validate.ps1` result and the three integration scenarios. Link the recording from the README after it has been created and its URL is verified.
+4. **Restore hosted CI verification** once the GitHub Actions billing/runner block is resolved; then record the actual run URL and final status.
+5. **Expand regression coverage** for IPv4/IPv6 CIDR edge cases, partial or nested unknown values, child-module traversal, and additional Terraform resource patterns.
+
+#### Evidence and status discipline
+- Repository topics are discoverability metadata, not proof of technical capability.
+- Branch protection is a repository configuration change; mark it complete only after the saved rule is verified.
+- A screen recording is an evidence artifact; mark it published only after the file is uploaded and the public URL is confirmed.
+- The current **3/3 local integration result** supports a strong portfolio demonstration for cloud security automation and DevSecOps. It is not a benchmark-based industry score, a live-client result, or proof of production readiness.
+- Do not invent deployment counts, blocked exposure totals from client environments, financial savings, or NIST certification/conformance.
+
+#### Next evidence checkpoint
+Once topics and branch protection are configured and the demo is published, append the verified setting state, date, relevant URLs, and commit references here. Keep this log append-only: add dated entries for new evidence and corrections; do not delete prior historical entries.
