@@ -5,47 +5,52 @@ Standalone portfolio demonstrator: evaluate Terraform plan JSON with Open Policy
 **Scope disclaimer:** This is not a production deployment or proof of complete NIST SP 800-207 conformance. Rules cover selected AWS resource patterns and need validation against real provider versions and organization requirements.
 
 ## Controls
+
 - Public IPv4/IPv6 ingress for SSH (TCP/22) and RDP (TCP/3389).
 - Explicitly unresolved security-group ingress in a Terraform plan is denied rather than assumed safe.
 - EBS volumes explicitly configured without encryption.
 - S3 public-access-block settings explicitly disabled.
 
-## Provider-plan validation notes
+## Validation
 
-The policy has also been evaluated against isolated Terraform-generated AWS provider plan JSON (AWS provider v6.70.0). In the observed local checks, public SSH (TCP/22) and public RDP (TCP/3389) produced denials, while a security group whose configuration omitted ingress returned no violations even though the provider marked planned ingress as unknown.
-
-These are plan-only checks using test configuration and dummy credentials. No cloud infrastructure was applied or changed. The unresolved-ingress mitigation is targeted: recursive child-module configuration and all nested/partial unknown-value cases still require validation. See [PRO_NOTES.md](./PRO_NOTES.md) for commands, observed outputs, the regression encountered, limitations, and the evidence ledger.
-
-## Run
-Requires OPA CLI 1.x and Make (or Bash/WSL/Git Bash on Windows).
-
-```bash
-opa version
-opa test policy -v
-bash scripts/check.sh
-```
-
-The compliant fixture should yield zero violations; the noncompliant fixture should yield one or more.
-
-On Windows PowerShell, after installing OPA 1.x, run the repository's local validation script:
+Run the local policy regression suite and fixture checks from the repository root:
 
 ```powershell
 .\validate.ps1
 ```
 
-The script runs the Rego tests and verifies both example fixtures. Hosted GitHub Actions may still be unavailable if the account's billing lock prevents runner startup.
+The reproducible Terraform AWS-provider integration suite is documented in [terraform-integration/README.md](./terraform-integration/README.md).
 
-To evaluate a real plan in a test environment:
+Run on Windows PowerShell:
 
-```bash
-terraform plan -out=tfplan
-terraform show -json tfplan > tfplan.json
-opa eval --format pretty --data policy --input tfplan.json 'data.terraform.guardrails.violations'
+```powershell
+.\scripts\test-terraform-aws.ps1 -TerraformPath "$HOME\Tools\Terraform\terraform.exe" -OpaPath "$HOME\Tools\OPA\opa.exe"
 ```
 
-Review and sanitize plan JSON before sharing; it can contain sensitive infrastructure details.
+For a focused recruiter-facing walkthrough, see the [60-second demo recording script](./docs/DEMO_SCRIPT.md). This is a script for recording a real terminal run, not a claim that a video has already been published.
+
+### Observed integration results
+
+The fresh-plan runner was executed locally on 2026-10-23 using Terraform 1.17.0, AWS provider 6.70.0, and OPA 1.21.4 on Windows. The runner reported **ALL TERRAFORM/AWS INTEGRATION CHECKS PASSED**:
+
+| Scenario | Expected denials | Actual denials | Result |
+|---|---:|---:|---|
+| Public SSH (TCP/22 to 0.0.0.0/0) | 1 | 1 | PASS |
+| Public RDP (TCP/3389 to 0.0.0.0/0) | 1 | 1 | PASS |
+| Security group with no ingress block | 0 | 0 | PASS |
+
+These are local, plan-only integration tests. The fixtures use a placeholder VPC ID and dummy credentials. The runner calls Terraform init, plan, and show, then evaluates the generated JSON with OPA; it never invokes `terraform apply`. No AWS infrastructure was deployed or changed.
+
+The generated `.tfplan` and JSON files remain local under `artifacts/terraform-aws/` and are intentionally not committed by default. Terraform plan artifacts can expose infrastructure details or sensitive values in other configurations; review and sanitize before sharing.
+
+**Scope limitation:** these three cases validate only the tested SSH, RDP, and no-ingress scenarios. Recursive child-module configuration and all nested/partial unknown-value cases still require validation. This is not a production deployment or proof of complete NIST SP 800-207 conformance.
+
+## Tooling and CI
+
+The local baseline used Terraform 1.17.0 and OPA 1.21.4 on Windows/amd64. Hosted GitHub Actions previously failed before job startup because of an account billing lock; re-check CI status rather than interpreting that as a policy test failure.
 
 ## Accurate resume wording
-> Built a Terraform plan policy gate with OPA/Rego to detect selected cloud misconfigurations before deployment, supported by positive/negative fixtures and automated policy tests.
 
-Only claim measured impact or test success after collecting evidence. See `PRO_NOTES.md`.
+> Built and locally validated a Terraform plan policy gate with OPA/Rego, including automated AWS-provider integration tests that detected tested public SSH/RDP exposures and accepted a no-ingress scenario.
+
+Do not claim measured impact, production deployment, comprehensive security coverage, or complete NIST SP 800-207 conformance without additional evidence. See `PRO_NOTES.md`.

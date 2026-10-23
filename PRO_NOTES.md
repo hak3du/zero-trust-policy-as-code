@@ -5,7 +5,7 @@ This is the authoritative factual build log. Distinguish implemented, tested, ob
 ## Project control
 - Project: Terraform + OPA/Rego infrastructure guardrails
 - Repository: https://github.com/hak3du/zero-trust-policy-as-code
-- Status: Source files published to `main`; local validation completed with OPA 1.21.4 on Windows (12/12 unit tests passed; compliant fixture returned 0 denials; noncompliant fixture returned 4 denials). The local `validate.ps1` script completed all three validation stages successfully. Hosted GitHub Actions is blocked before job start by an account billing lock.
+- Status: Policy source and regression tests published to `main`; the clean-clone validation run observed 14/14 Rego tests passing, compliant fixture 0 denials, noncompliant fixture 4 denials, and all validation stages passing. Three additional existing Terraform-generated AWS provider plan JSON cases were evaluated against the latest policy and returned the expected denial counts (SSH 1, RDP 1, compliant no-ingress 0). A reproducible integration runner has been added on branch `feat/reproducible-terraform-aws-integration`; its fresh-plan end-to-end run is pending. Hosted GitHub Actions is blocked before job start by an account billing lock.
 - No cloud infrastructure has been deployed or changed.
 - Do not claim passing tests, measured impact, NIST conformance, or production deployment without evidence.
 
@@ -59,11 +59,10 @@ Initial publication commits (one per file):
   4. `SSH (TCP/22) exposed to the public internet: aws_security_group.admin`
 - Interpretation: unit tests and both example-fixture checks passed locally. This is not proof of full Terraform-provider behavior, production readiness, complete control coverage, or NIST SP 800-207 conformance. No cloud infrastructure was deployed or changed.
 
-
 ### 2026-10-23 — Step 6: Expanded policy tests and repeatable local validation
 - Added test coverage for public RDP over IPv4/IPv6, public SSH over IPv6, all four S3 public-access-block settings, and security-group ingress explicitly marked unknown in Terraform plan JSON.
 - Reproduced the unknown-ingress gap: the new test failed while the previous 11 tests passed. Added a Rego denial for non-delete security-group changes where `change.after_unknown.ingress == true` and `change.after` is an object.
-- Re-ran `opa test policy -v`: **PASS 12/12** on OPA 1.21.4, Windows/amd64.
+- Re-ran `opa test policy -v`: **PASS 12/12** on OPA 1.21.4, Windows/amd64 (at this historical Step 6 checkpoint).
 - Re-ran the compliant fixture evaluation: **0 denials**.
 - Re-ran the noncompliant fixture evaluation: **4 denials**. Observed messages identify unencrypted EBS, public RDP, disabled S3 `block_public_policy`, and public SSH.
 - Created and executed root-level `validate.ps1`. Observed all stages pass: 12/12 tests, compliant fixture 0 denials, noncompliant fixture 4 denials, final output `ALL VALIDATION CHECKS PASSED.`
@@ -71,7 +70,7 @@ Initial publication commits (one per file):
 
 ## Next actions
 - [ ] Check the outcome of the retried GitHub Actions job and diagnose any runner/provisioning issue.
-- [x] Run `opa version` and `opa test policy -v` locally on OPA 1.21.4; 12/12 tests pass.
+- [x] Run `opa version` and `opa test policy -v` locally on OPA 1.21.4; 14/14 tests pass.
 - [x] Verify compliant fixture yields zero violations (observed 0).
 - [x] Verify noncompliant fixture yields four expected violations and inspect emitted messages.
 - [ ] Review unknown plan values, missing controls, replacement actions, and module resources.
@@ -174,6 +173,82 @@ The local working directory was a ZIP-extracted folder, not a Git working tree: 
 ### 2026-10-23 — Step 8: Main-branch provider regression coverage
 - Applied the provider-aware unknown-ingress policy and the associated README scope note directly to `main`.
 - Added two Rego regression tests to `policy/guardrails_test.rego`: (1) provider marks ingress unknown while root configuration omits an ingress expression, which should remain allowed; (2) provider marks ingress unknown while the matching configuration explicitly contains an ingress expression, which should be denied.
-- These two new tests are committed to `main`, but **have not been executed in this GitHub-connected session**. The previously observed 12/12 local test result predates these two additions. Re-run `opa test policy -v` and `.\validate.ps1` from a real clone before treating the expanded 14-test suite as passing.
+- The two new regression tests are committed to `main`. A fresh clone was validated locally on 2026-10-23: `validate.ps1` reported **14/14 tests passing**, compliant fixture 0 denials, noncompliant fixture 4 denials, and `ALL VALIDATION CHECKS PASSED.`
 - The prior Terraform AWS provider plan observations remain limited to the isolated local test fixtures documented in Step 7. No cloud apply or deployment was performed.
 
+
+### 2026-10-23 — Step 9: Reproducible Terraform/AWS integration suite authored
+
+- Created branch: `feat/reproducible-terraform-aws-integration`.
+- Added isolated Terraform configurations under `terraform-integration/public-ssh`, `terraform-integration/public-rdp`, and `terraform-integration/compliant-no-ingress`.
+- Each fixture pins `hashicorp/aws` to `6.70.0`; test resources use a placeholder VPC ID and dummy provider credentials.
+- Added `scripts/test-terraform-aws.ps1`. It runs `terraform init -backend=false`, `terraform plan -refresh=false`, `terraform show -json`, and OPA evaluation. It never invokes `terraform apply`. It also overwrites AWS credential environment variables with dummy values and disables EC2 metadata lookup.
+- Generated plan JSON and binary plans are written to `artifacts/terraform-aws/` when the script is executed. The fresh-plan runner has now been executed locally and all three expected denial counts passed. Generated outputs remain local and are not committed as repository artifacts.
+- Updated README instructions and added integration-suite documentation.
+- Validation status at the time of this Step 9 entry was pending; see Step 10 below for the completed fresh-plan execution and observed results.
+- Safety: no `terraform apply`, deployment, or AWS resource modification is performed or intended.
+
+
+### 2026-10-23 — Step 10: Fresh-plan Terraform/AWS integration run passed
+
+- Executed `scripts/test-terraform-aws.ps1` locally from the ZIP-extracted feature-branch source directory using Terraform 1.17.0 and OPA 1.21.4 on Windows.
+- The runner initialized the pinned AWS provider `hashicorp/aws v6.70.0` in all three fixture directories and generated fresh plans with `terraform plan`; no `terraform apply` was run.
+- Observed results:
+  - `public-ssh`: expected denials 1; actual denials 1 — **PASS**.
+  - `public-rdp`: expected denials 1; actual denials 1 — **PASS**.
+  - `compliant-no-ingress`: expected denials 0; actual denials 0 — **PASS**.
+  - Final runner output: `ALL TERRAFORM/AWS INTEGRATION CHECKS PASSED.`
+- Generated plan and JSON paths were under local `artifacts/terraform-aws/`. The outputs have not been committed; binary plans and potentially sensitive plan JSON are intentionally excluded from the public repository by default.
+- This validates these three fixtures against the current policy and pinned provider only. It does not establish production deployment, comprehensive cloud security coverage, recursive child-module coverage, or complete NIST SP 800-207 conformance.
+- The runner was executed from a ZIP-extracted folder, not a Git working tree. The source files and documentation are committed on the feature branch via the GitHub repository workflow; generated local outputs are not automatically uploaded.
+
+
+### 2026-10-23 — Step 11: Repository hardening and discoverability — next execution phase
+
+**Objective:** make the project easier for reviewers to discover, inspect, and trust, while building on the already demonstrated local validation.
+
+#### Completed evidence carried forward
+- Published implementation of Terraform plan evaluation with OPA/Rego guardrails.
+- Expanded local policy suite: 14/14 Rego tests passed on OPA 1.21.4 in the documented clean-clone validation.
+- Fresh Terraform/AWS provider integration run passed **3/3 scenarios** with Terraform 1.17.0, AWS provider v6.70.0, and OPA 1.21.4:
+  - Public SSH: 1 expected denial, 1 observed.
+  - Public RDP: 1 expected denial, 1 observed.
+  - Compliant no-ingress: 0 expected denials, 0 observed.
+- The runner uses plan generation and OPA evaluation only; it does not run `terraform apply`.
+- These are concrete portfolio engineering signals: repeatable validation, a regression-tested policy edge case, and a reproducible provider-backed plan workflow.
+
+#### Immediate repository actions
+1. **Add GitHub repository topics** to improve relevant technical discovery: `terraform`, `opa`, `rego`, `zero-trust`, `policy-as-code`, `devsecops`, `infrastructure-as-code`, `cloud-security`, `nist-sp-800-207`, `aws`.
+2. **Configure branch protection for `main`** using the repository's available GitHub settings. Recommended controls: require pull requests where appropriate, prevent force-pushes and branch deletion, and require relevant status checks after a reliable hosted CI workflow is available.
+3. **Record a short demonstration** showing the actual local `validate.ps1` result and the three integration scenarios. Link the recording from the README after it has been created and its URL is verified.
+4. **Restore hosted CI verification** once the GitHub Actions billing/runner block is resolved; then record the actual run URL and final status.
+5. **Expand regression coverage** for IPv4/IPv6 CIDR edge cases, partial or nested unknown values, child-module traversal, and additional Terraform resource patterns.
+
+#### Evidence and status discipline
+- Repository topics are discoverability metadata, not proof of technical capability.
+- Branch protection is a repository configuration change; mark it complete only after the saved rule is verified.
+- A screen recording is an evidence artifact; mark it published only after the file is uploaded and the public URL is confirmed.
+- The current **3/3 local integration result** supports a strong portfolio demonstration for cloud security automation and DevSecOps. It is not a benchmark-based industry score, a live-client result, or proof of production readiness.
+- Do not invent deployment counts, blocked exposure totals from client environments, financial savings, or NIST certification/conformance.
+
+#### Next evidence checkpoint
+Once topics and branch protection are configured and the demo is published, append the verified setting state, date, relevant URLs, and commit references here. Keep this log append-only: add dated entries for new evidence and corrections; do not delete prior historical entries.
+
+
+### 2026-10-23 — Step 12: Recruiter demo path prepared
+
+- Added `docs/DEMO_SCRIPT.md` with a concise 60-second screen-recording plan, narration, exact PowerShell commands, safety checklist, and publication checklist. Commit: `7b6fe50dd61a8b9649e61b23933e3789bc9ef710`.
+- Updated the feature-branch README to link the demo script and clearly label it as a recording script, not an already-published video. Commit: `1dd57d56ea1507a48e85e602471aeb8db8a23612`.
+- The demo sequence highlights the documented local policy-validation baseline and the three previously observed Terraform/AWS integration outcomes. During recording, show the actual current terminal output; do not reuse historical output as if it were a new run.
+- Recording and publishing the video remain pending because the actual terminal capture must be made from the user's local environment. No video URL is claimed.
+- Repository topics and branch protection have not been changed by this step. The connected GitHub actions available in this workflow support repository/file reads and content commits but do not expose a write action for repository topics or branch-protection settings. Those two settings must be saved through GitHub's repository UI and then verified.
+- Next: configure topics at https://github.com/hak3du/zero-trust-policy-as-code/settings and protect `main` at https://github.com/hak3du/zero-trust-policy-as-code/settings/branches; then record the verified settings. After that, capture and publish the real demo and replace the README's script-only reference with the verified video link.
+- This step creates a ready-to-record demonstration path; it does not claim that repository settings or video publication are complete.
+
+
+### 2026-10-23 — Step 13: GitHub code-upload/write-path smoke test
+
+- Purpose: verify whether the connected GitHub workflow can still publish a source-controlled change.
+- Action: appended this dated entry to `PRO_NOTES.md` on `feat/reproducible-terraform-aws-integration` using GitHub's file-contents write path. Existing notes were preserved; no prior content was deleted.
+- Result: pending confirmation from the write response and a follow-up read of the committed file.
+- Scope: this smoke test checks a text-file commit to the feature branch. It does not test branch protection, hosted Actions, deployment, or writes to `main`.
