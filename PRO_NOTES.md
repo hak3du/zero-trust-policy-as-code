@@ -48,7 +48,7 @@ Initial publication commits (one per file):
 - GitHub Actions run 3: https://github.com/hak3du/zero-trust-policy-as-code/actions/runs/39965095970 — reported `failure`, completed about two seconds after start, with no job steps exposed.
 - Log retrieval returned GitHub `404 BlobNotFound`; job-step retrieval returned an empty step list. Root cause is **undetermined**; do not attribute failure to policy syntax without evidence.
 - Checked the official Open Policy Agent setup action documentation. The workflow's `open-policy-agent/setup-opa@v2` reference and `version: latest` input match the documented usage: https://github.com/open-policy-agent/setup-opa#readme . This does not explain the zero-step failure.
-- Retried the failed GitHub Actions job once through GitHub's rerun-job operation. Retry was accepted; its outcome has not yet been verified.
+- Retried the failed GitHub Actions job once through GitHub's rerun-job operation. The retry also failed. The new job ID was `120453705402`; step retrieval returned an empty list and log retrieval returned `404 BlobNotFound`. This reinforces that no runner steps/logs were exposed; the underlying cause remains unknown.
 - Adjusted workflow triggers to run only when policy, fixture, or workflow files change, avoiding unnecessary runs for notes-only commits. Workflow change commit: `ca8b69b98bc0cafef41b4ba9cfcf5415218f352c`.
 - CI is not green; policy behavior remains unverified.
 
@@ -68,7 +68,7 @@ Initial publication commits (one per file):
 | OPA unit tests | Pass | NOT RUN — OPA unavailable locally |
 | Compliant fixture | 0 violations | Pending |
 | Noncompliant fixture | 1+ violations | Pending |
-| GitHub Actions | Green | FAIL — three runs, no steps/logs exposed; retry accepted, result pending |
+| GitHub Actions | Green | FAIL — three original runs plus one retry; all observed job attempts expose no steps/logs; root cause unknown |
 | Cloud deployment | Not required | Not performed |
 
 ## Evidence entry template
